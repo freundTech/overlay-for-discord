@@ -1,0 +1,10 @@
+{
+    "uuid": "overlay-for-discord@adrian.freund.io",
+    "name": "Overlay for Discord",
+    "description": "A overlay for discord",
+    "settings-schema": "org.gnome.shell.extensions.overlay-for-discord",
+    "shell-version": [ "44" ],
+    "url": "https://github.com/freundTech/overlay-for-discord",
+    "version": 1
+}
+

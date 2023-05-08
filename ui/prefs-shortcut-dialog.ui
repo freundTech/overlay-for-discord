@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<interface domain="overlay-for-discord@adrian.freund.io">
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.3"/>
+  <template class="OverlayShortcutDialog" parent="AdwWindow">
+    <property name="modal">1</property>
+    <property name="title" translatable="yes">Keyboard Shortcut</property>
+    <property name="content">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="AdwHeaderBar">
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="margin-top">32</property>
+            <property name="margin-bottom">32</property>
+            <property name="margin-start">32</property>
+            <property name="margin-end">32</property>
+            <property name="label">Enter a new keyboard shortcut. Press Esc to cancel.</property>
+            <property name="wrap">true</property>
+            <property name="justify">center</property>
+          </object>
+        </child>
+      </object>
+    </property>
+    <child>
+      <object class="GtkEventControllerKey" id="event_controller">
+        <signal name="key-pressed" handler="on_key_pressed" />
+      </object>
+    </child>
+  </template>
+</interface>

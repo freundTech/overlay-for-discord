@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface domain="overlay-for-discord@adrian.freund.io">
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.3"/>
+  <template class="OverlayPrefsWidget" parent="AdwPreferencesPage">
+    <child>
+      <object class="AdwPreferencesGroup" id="display_group">
+        <property name="title" translatable="yes">Display</property>
+        <child>
+          <object class="AdwComboRow" id="position_row">
+            <property name="title" translatable="yes">Position</property>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Show Profile Pictures</property>
+            <child>
+              <object class="GtkSwitch" id="show_picture_switch">
+                <property name="valign">center</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Show Usernames</property>
+            <child>
+              <object class="GtkSwitch" id="show_username_switch">
+                <property name="valign">center</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Overlay Size</property>
+            <child>
+              <object class="GtkScale" id="overlay_size_slider">
+                <property name="hexpand">1</property>
+                <marks>
+                  <mark value="30" position="bottom">Small</mark>
+                  <mark value="40" position="bottom" />
+                  <mark value="50" position="bottom" />
+                  <mark value="60" position="bottom" />
+                  <mark value="70" position="bottom">Large</mark>
+                </marks>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="AdwPreferencesGroup" id="shortcuts_group">
+        <property name="title" translatable="yes">Keyboard Shortcuts</property>
+        <child>
+          <object class="OverlayShortcutRow" id="mute_row">
+            <property name="title" translatable="yes">Mute</property>
+          </object>
+        </child>
+        <child>
+          <object class="OverlayShortcutRow" id="deafen_row">
+            <property name="title" translatable="yes">Deafen</property>
+          </object>
+        </child>
+        <child>
+          <object class="OverlayShortcutRow" id="hide_row">
+            <property name="title" translatable="yes">Toggle Overlay</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

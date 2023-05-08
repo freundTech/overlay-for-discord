@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.gnome.shell.extensions.overlay-for-discord.direction">
+    <value value="0" nick="top"/>
+    <value value="1" nick="right"/>
+    <value value="2" nick="bottom"/>
+    <value value="3" nick="left"/>
+  </enum>
+
+  <schema id="org.gnome.shell.extensions.overlay-for-discord"
+    path="/org/gnome/shell/extensions/overlay-for-discord/">
+
+    <key name="position" enum="org.gnome.shell.extensions.overlay-for-discord.direction">
+      <default>'right'</default>
+      <summary>Position</summary>
+      <description>The screen edge the overlay is displayed on</description>
+    </key>
+
+    <key name="show-username" type="b">
+      <default>true</default>
+      <summary>Show usernames</summary>
+      <description>Show active users usernames in the Overlay</description>
+    </key>
+
+    <key name="show-profile-picture" type="b">
+      <default>true</default>
+      <summary>Show profile picture</summary>
+      <description>Show active users profile pictures in the Overlay</description>
+    </key>
+
+    <key name="size" type="i">
+      <default>40</default>
+      <summary>Overlay size</summary>
+      <description>The size to display the overlay at</description>
+    </key>
+
+    <key name="access-token" type="ms">
+      <default>nothing</default>
+      <summary>(Internal) Discord access token</summary>
+      <description>The token to connect to discord with</description>
+    </key>
+
+    <key name="mute-key" type="as">
+      <default><![CDATA[['<Shift><Control>m']]]></default>
+      <summary>Mute hotkey</summary>
+    </key>
+
+    <key name="deafen-key" type="as">
+      <default><![CDATA[['<Shift><Control>d']]]></default>
+      <summary>Deafen hotkey</summary>
+    </key>
+
+    <key name="hide-key" type="as">
+      <default><![CDATA[['<Shift><Control>t']]]></default>
+      <summary>Toggle hotkey</summary>
+    </key>
+  </schema>
+</schemalist>

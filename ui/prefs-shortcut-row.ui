@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<interface domain="overlay-for-discord@adrian.freund.io">
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.3"/>
+  <template class="OverlayShortcutRow" parent="AdwActionRow">
+    <child>
+      <object class="GtkButton" id="button">
+        <property name="valign">center</property>
+        <signal name="clicked" handler="on_button_clicked"/>
+      </object>
+    </child>
+  </template>
+</interface>
