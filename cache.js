@@ -34,6 +34,8 @@ var CachedImageLoader = GObject.registerClass({}, class CachedImageLoader extend
         if (!exists) {
             await this._download(url, file);
         }
+
+        return file_path;
     }
 
     async _download(url, file) {

@@ -26,6 +26,9 @@ const {Overlay} = Me.imports.overlay
 class Extension {
 
     constructor() {
+        let ctx = St.ThemeContext.get_for_stage(global.stage)
+        log("INIT!!")
+        log(ctx.get_scale_factor())
     }
 
     /**
@@ -37,34 +40,37 @@ class Extension {
      */
     enable() {
         log(`enabling ${Me.metadata.name}`);
-        //Main.layoutManager.uiGroup.add_child(this.myIcon);
 
-        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.overlay-for-discord');
+        const settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.overlay-for-discord');
 
-        this._connector = new DiscordConnector(this.settings);
+        this._connector = new DiscordConnector(settings);
 
-        this._overlay = new Overlay(this.settings, this._connector);
-        Main.layoutManager.addTopChrome(this._overlay);
+        this._overlay = new Overlay(settings, this._connector);
+        settings.bind('show-username', this._overlay, 'show-names', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('show-profile-picture', this._overlay, 'show-icons', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('size', this._overlay, 'overlay-size', Gio.SettingsBindFlags.DEFAULT);
 
         this._connector.bind_property('users', this._overlay, 'users', GObject.BindingFlags.SYNC_CREATE);
 
 
         this._connector.connect();
 
-        Main.wm.addKeybinding("mute-key", this.settings,
+        Main.wm.addKeybinding("mute-key", settings,
             Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
             this.onMuteKey.bind(this))
 
-        Main.wm.addKeybinding("deafen-key", this.settings,
+        Main.wm.addKeybinding("deafen-key", settings,
             Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
             this.onDeafenKey.bind(this))
 
-        Main.wm.addKeybinding("hide-key", this.settings,
+        Main.wm.addKeybinding("hide-key", settings,
             Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
             this.onHideKey.bind(this))
+
+        Main.layoutManager.addTopChrome(this._overlay);
     }
 
 
@@ -77,12 +83,15 @@ class Extension {
      */
     disable() {
         log(`disabling ${Me.metadata.name}`);
-        this._connector.disconnect();
+        Main.layoutManager.removeChrome(this._overlay);
 
         Main.wm.removeKeybinding("mute-key");
         Main.wm.removeKeybinding("deafen-key");
+        Main.wm.removeKeybinding("hide-key");
 
-        Main.layoutManager.removeChrome(this._overlay);
+        this._connector.disconnect();
+
+
         this._overlay.destroy();
 
         this._connector = null;

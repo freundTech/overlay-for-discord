@@ -25,28 +25,80 @@ var UserModel = GObject.registerClass({
 }, class extends GObject.Object {
 })
 
-const UserPictureWidget = GObject.registerClass({
+// Adapted from gnome-shell/js/ui/userWidget.js
+// Originally adapted from gdm/gui/user-switch-applet/applet.c
+//
+// Copyright (C) 2004-2005 James M. Cape <jcape@ignore-your.tv>.
+// Copyright (C) 2008,2009 Red Hat, Inc.
+// Copyright (C) 2023 Adrian Freund <adrian@freund.io>
+const OverlayPictureWidget = GObject.registerClass({
     GTypeName: "OverlayUserPicture",
     CssName: "OverlayUserPicture",
-}, class UserPictureWidget extends St.Widget {
-    set_size(width, height) {
-        super.set_size(width, height);
+}, class OverlayPictureWidget extends St.Bin {
+    _init(image, params) {
+        let themeContext = St.ThemeContext.get_for_stage(global.stage);
 
-        this._update_style();
+        super._init({
+            width: params.iconSize * themeContext.scaleFactor,
+            height: params.iconSize * themeContext.scaleFactor,
+        });
+
+        this._iconSize = params.iconSize;
+        this._image = image;
+
+        // Monitor the scaling factor to make sure we recreate the avatar when needed.
+        themeContext.connectObject('notify::scale-factor', this.update.bind(this), this);
+        this.connect('notify::iconSize', (_widget, _value) => {
+            log("received");
+            this.update();
+        });
+        this.update();
     }
 
-    set_image(url) {
-        this._image = url;
-
-        this._update_style();
+    set image(image) {
+        this._image = image;
+        this.update();
     }
 
-    _update_style() {
-        this.style = `border-radius: ${this.width / 2 + 1}px ${this.height / 2 + 1}px; background-image: url(${this._image});`
+    vfunc_style_changed() {
+        super.vfunc_style_changed();
+
+        let node = this.get_theme_node();
+        let [found, iconSize] = node.lookup_length('icon-size', false);
+
+        if (!found)
+            return;
+
+        let themeContext = St.ThemeContext.get_for_stage(global.stage);
+
+        // node.lookup_length() returns a scaled value, but we
+        // need unscaled
+        this._iconSize = iconSize / themeContext.scaleFactor;
+        this.update();
     }
 
-})
+    update() {
+        let { scaleFactor } = St.ThemeContext.get_for_stage(global.stage);
+        this.set_size(
+            this._iconSize * scaleFactor,
+            this._iconSize * scaleFactor);
 
+        if (this._image) {
+            this.child = null;
+            this.style = `
+                background-image: url("${this._image}");
+                background-size: cover;`;
+            log(this.style);
+        } else {
+            this.style = "background-color: gray";
+            this.child = new St.Icon({
+                icon_name: 'avatar-default-symbolic',
+                icon_size: this._iconSize * 2 / 3,
+            });
+        }
+    }
+});
+// End adapted from gnome-shell/js/ui/userWidget.js
 
 const UserWidget = GObject.registerClass({
         GTypeName: "OverlayUserWidget",
@@ -61,25 +113,31 @@ const UserWidget = GObject.registerClass({
         constructor(user) {
             super()
             this._user = user;
+            this._imageLoader = new CachedImageLoader();
 
             this.layout_manager = new Clutter.BoxLayout({orientation: Clutter.Orientation.HORIZONTAL});
 
 
-            this._icon = new UserPictureWidget({})
+            this._icon = new OverlayPictureWidget(null, {iconSize: 40});
             this._label = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
             })
+            this._muteIcon = new St.Icon({gicon: new Gio.ThemedIcon({name: 'microphone-sensitivity-muted'})})
             this.add_child(this._icon);
             this.add_child(this._label);
+            this.add_child(this._muteIcon);
 
             this.bind_property('show-icon', this._icon, 'visible', GObject.BindingFlags.SYNC_CREATE);
             this.bind_property('show-name', this._label, 'visible', GObject.BindingFlags.SYNC_CREATE);
             this.connect('notify::overlay-size', (_widget, _value) => {
-                this._icon.set_size(this.overlaySize, this.overlaySize);
+                log("size changed")
+                this._icon.iconSize = this.overlaySize;
+                this._icon.update();
             })
 
             this._userBinding = new GObject.BindingGroup()
             this._userBinding.bind('username', this._label, 'text', GObject.BindingFlags.SYNC_CREATE);
+            this._userBinding.bind('muted', this._muteIcon, 'visible', GObject.BindingFlags.SYNC_CREATE);
             this._userBinding.bind_full('speaking', this, 'style-class', GObject.BindingFlags.SYNC_CREATE, (binding, speaking) => {
                 if (speaking) {
                     return [1, "speaking"];
@@ -88,8 +146,9 @@ const UserWidget = GObject.registerClass({
                 }
             }, null);
             this._userBinding.source = user;
-            this._icon.set_image(user.profilePicture);
-            //this.imageLoader.loadImage(user.profilePicture).catch(log);
+            this._imageLoader.loadImage(user.profilePicture).then(result => {
+                this._icon.image = result;
+            })
         }
 
         set user(user) {
@@ -114,7 +173,7 @@ var Overlay = GObject.registerClass({
             "users": GObject.ParamSpec.object("users", "Users", "The users currently in the channel", GObject.ParamFlags.READWRITE, Gio.ListModel.$gtype),
         }
     }, class Overlay extends St.Widget {
-        constructor(settings) {
+        constructor() {
             super({
                 name: 'overlay-for-discord',
                 reactive: false,
@@ -123,11 +182,9 @@ var Overlay = GObject.registerClass({
                 y_expand: true,
             });
 
-            this._settings = settings;
 
             this._users = null;
 
-            this._position = this._settings.get_string('position');
             this._vertical = (this._position === 'left' || this._position === 'right');
 
             this.set_offscreen_redirect(Clutter.OffscreenRedirect.ALWAYS);
@@ -144,15 +201,11 @@ var Overlay = GObject.registerClass({
 
             this.add_child(this._container)
 
-            this._settings.connect('changed::position', this._updatePosition.bind(this));
-            this._settings.bind('show-username', this, 'show-names', Gio.SettingsBindFlags.DEFAULT);
-            this._settings.bind('show-profile-picture', this, 'show-icons', Gio.SettingsBindFlags.DEFAULT);
-            this._settings.bind('size', this, 'overlay-size', Gio.SettingsBindFlags.DEFAULT);
         }
 
         vfunc_get_preferred_height(_forWidth) {
             let height = global.stage.height;
-            return [height, height];
+            return [null, height];
         }
 
         set users(users) {

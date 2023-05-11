@@ -1,0 +1,40 @@
+$variant: 'dark';
+
+@import "gnome-shell-sass/_colors";
+
+$base_padding: 6px;
+$base_margin: 4px;
+
+$base_font_size: 11pt;
+
+
+OverlayWidgetContainer {
+    margin: 10px;
+}
+
+OverlayUserPicture {
+    border-width: 3px;
+    border-color: transparent;
+    border-radius: 99px;
+}
+
+OverlayUserWidget.speaking OverlayUserPicture {
+    border-color: $success_color;
+}
+
+OverlayUserWidget StLabel {
+    background-color: rgba(30, 33, 36, 0.5);
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 99px;
+    font-size: $base_font_size;
+    padding: $base_padding $base_padding * 2;
+    font-weight: bold;
+    margin-left: $base_margin * 2;
+    margin-top: $base_margin;
+    margin-bottom: $base_margin;
+}
+
+OverlayUserWidget.speaking StLabel {
+    background-color: rgba(0, 0, 0, 0.9);
+    color: rgba(255, 255, 255, 0.9);
+}

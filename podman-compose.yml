@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  sass:
+    build:
+      context: .
+    volumes:
+      - .:/work:Z
+    working_dir: /work
+    command: ["stylesheet.scss", "stylesheet.css"]

@@ -37,9 +37,20 @@ const DiscordUserListModel = GObject.registerClass({
         }
 
         addUser(user, id) {
-            this._items.push(id);
+            const index = this._getInsertIndex(user);
             this._id_map[id] = user;
-            this.items_changed(this._items.length-1, 0, 1)
+            this._items.splice(index, 0, id)
+            this.items_changed(index, 0, 1)
+        }
+
+        _getInsertIndex(user) {
+            // Could use a binary search, but probably doesn't matter with the amount of users we're dealing with
+            for (let i = 0; i < this._items.length; i++) {
+                if (user.username < this._id_map[this._items[i]].username) {
+                    return i;
+                }
+            }
+            return this._items.length;
         }
 
         clear() {
@@ -67,6 +78,7 @@ const DiscordUserListModel = GObject.registerClass({
 
         removeById(id) {
             const index = this._items.indexOf(id);
+            this._items.splice(index, 1);
             delete this._id_map[id];
             this.items_changed(index, 1, 0);
         }
@@ -74,7 +86,7 @@ const DiscordUserListModel = GObject.registerClass({
         replaceById(id, user) {
             const index = this._items.indexOf(id);
             this._id_map[id] = user
-            this.item_changed(index, 1, 1);
+            this.items_changed(index, 1, 1);
         }
     }
 )
@@ -164,8 +176,8 @@ var DiscordConnector = GObject.registerClass({
             this.pending_requests[cmd.nonce] = resolve
 
             setTimeout(() => {
-                reject("Timeout exceeded");
                 delete this.pending_requests[cmd.nonce];
+                reject("Timeout exceeded");
             }, MESSAGE_TIMEOUT);
         });
     }
@@ -193,7 +205,7 @@ var DiscordConnector = GObject.registerClass({
 
         //log(`Recv message: ${str}`);
 
-        // If this is a reponse to a request we sent handle it here
+        // If this is a response to a request we sent handle it here
         if (message.nonce in this.pending_requests) {
             this.pending_requests[message.nonce](message);
             return;
@@ -225,7 +237,7 @@ var DiscordConnector = GObject.registerClass({
             case Event.VOICE_STATE_DELETE:
                 await this._onUserLeave(data)
                 break;
-            case Event.VOICE_STATE_CHANGE:
+            case Event.VOICE_STATE_UPDATE:
                 await this._onUserChange(data)
                 break;
             case Event.VOICE_SETTINGS_UPDATE:
@@ -422,7 +434,7 @@ var DiscordConnector = GObject.registerClass({
             await Promise.all([
                 this._unsubscribeEvent(Event.VOICE_STATE_CREATE, {channel_id: this.current_channel}),
                 this._unsubscribeEvent(Event.VOICE_STATE_DELETE, {channel_id: this.current_channel}),
-                this._unsubscribeEvent(Event.VOICE_STATE_CHANGE, {channel_id: this.current_channel}),
+                this._unsubscribeEvent(Event.VOICE_STATE_UPDATE, {channel_id: this.current_channel}),
                 this._unsubscribeEvent(Event.SPEAKING_START, {channel_id: this.current_channel}),
                 this._unsubscribeEvent(Event.SPEAKING_STOP, {channel_id: this.current_channel}),
             ])
@@ -444,22 +456,32 @@ var DiscordConnector = GObject.registerClass({
         await Promise.all([
             this._subscribeEvent(Event.VOICE_STATE_CREATE, {channel_id: channel.id}),
             this._subscribeEvent(Event.VOICE_STATE_DELETE, {channel_id: channel.id}),
-            this._subscribeEvent(Event.VOICE_STATE_CHANGE, {channel_id: channel.id}),
+            this._subscribeEvent(Event.VOICE_STATE_UPDATE, {channel_id: channel.id}),
             this._subscribeEvent(Event.SPEAKING_START, {channel_id: channel.id}),
             this._subscribeEvent(Event.SPEAKING_STOP, {channel_id: channel.id}),
         ])
     }
 
     async _onUserJoin(data) {
+        log(`user joined ${data}`)
         this.users.addUser(this._createUserModel(data), data.user.id);
     }
 
     async _onUserLeave(data) {
+        log(`user left ${data}`)
         this.users.removeById(data.user.id);
     }
 
     async _onUserChange(data) {
-        this.users.replaceById(data.user.id, this._createUserModel(data));
+        const user = this.users.getById(data.user.id);
+
+        if (user.username !== data.nick) {
+            // Just replace the user for now. Easier than trying to keep the list sorted across updates.
+            this.users.replaceById(data.user.id, this._createUserModel(data));
+        }
+        user.profilePicture = this._getProfilePictureUrl(data.user.id, data.user.avatar);
+        user.muted = data.voice_state.mute || data.voice_state.self_mute;
+        user.deaf = data.voice_state.deaf || data.voice_state.self_deaf;
     }
 
     async _onSpeakingStart(data) {
@@ -483,7 +505,13 @@ var DiscordConnector = GObject.registerClass({
     _createUserModel(data) {
         return new UserModel({
             username: data.nick,
-            profilePicture: `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.jpg`,
+            profilePicture: this._getProfilePictureUrl(data.user.id, data.user.avatar),
+            muted: data.voice_state.self_mute,
+            deaf: data.voice_state.self_deaf
         });
+    }
+
+    _getProfilePictureUrl(id, avatar) {
+        return `https://cdn.discordapp.com/avatars/${id}/${avatar}.jpg`
     }
 });

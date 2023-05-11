@@ -100,6 +100,18 @@ const PrefsWidget = GObject.registerClass({
             this._settings.bind('mute-key', this._mute_row, 'values', Gio.SettingsBindFlags.DEFAULT);
             this._settings.bind('deafen-key', this._deafen_row, 'values', Gio.SettingsBindFlags.DEFAULT);
             this._settings.bind('hide-key', this._hide_row, 'values', Gio.SettingsBindFlags.DEFAULT);
+
+            // Make sure at least one of show username and show picture are active
+            this._show_username_switch.connect("notify::active", (widget, _property) => {
+                if (!widget.active && !this._show_picture_switch.active) {
+                    this._settings.set_boolean('show-profile-picture', true);
+                }
+            })
+            this._show_picture_switch.connect("notify::active", (widget, _property) => {
+                if (!widget.active && !this._show_username_switch.active) {
+                    this._settings.set_boolean('show-username', true);
+                }
+            })
         }
     }
 );
